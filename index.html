@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Impresión Textil</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- ========== PANTALLA DE INICIO ========== -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <i class="fas fa-print"></i>
+        <h1>Gestor de Impresión Textil</h1>
+        <p>Seleccioná cómo querés ingresar</p>
+      </div>
+      <div class="login-buttons">
+        <button class="login-btn admin" id="btnEnterAdmin">
+          <i class="fas fa-user-shield"></i>
+          <span>Administrador</span>
+          <small>Subir archivos, crear carpetas y ver tareas</small>
+        </button>
+        <button class="login-btn empleado" id="btnEnterEmpleado">
+          <i class="fas fa-user"></i>
+          <span>Empleado</span>
+          <small>Ver archivos, seleccionar piezas y exportar</small>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== APP PRINCIPAL ========== -->
+  <div id="app" style="display:none;">
+    <aside class="sidebar">
+      <div class="logo">
+        <i class="fas fa-print"></i>
+        <span>Gestor Impresión</span>
+      </div>
+
+      <div class="current-role" id="currentRoleLabel">
+        <i class="fas fa-user-shield"></i>
+        <span>Administrador</span>
+      </div>
+      
+      <nav class="nav">
+        <button class="nav-item active" data-view="drive" id="navDrive">
+          <i class="fas fa-folder"></i> <span id="navDriveLabel">Mis Archivos</span>
+        </button>
+        <button class="nav-item" data-view="tasks" id="navTasks">
+          <i class="fas fa-tasks"></i> Tareas de Impresión
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="weather-widget" id="weatherWidget">
+          <div class="weather-loading">Cargando clima...</div>
+        </div>
+        <button class="btn-logout" id="btnLogout">
+          <i class="fas fa-sign-out-alt"></i> Cambiar de usuario
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="toolbar">
+        <div class="breadcrumb" id="breadcrumb">
+          <span class="crumb" data-id="root">Inicio</span>
+        </div>
+        <div class="search-bar" id="searchBar">
+          <i class="fas fa-search"></i>
+          <input type="text" id="searchInput" placeholder="Buscar cliente o pedido...">
+        </div>
+        <div class="toolbar-actions" id="adminActions">
+          <button class="btn btn-secondary" id="btnNewFolder">
+            <i class="fas fa-folder-plus"></i> Nuevo cliente
+          </button>
+          <button class="btn btn-primary" id="btnUpload" type="button">
+            <i class="fas fa-upload"></i> Subir archivo
+          </button>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden>
+          <span id="uploadStatus" class="upload-status"></span>
+        </div>
+        <div class="toolbar-actions" id="empleadoBadge" style="display:none;">
+          <span class="role-badge"><i class="fas fa-eye"></i> Solo lectura + exportación</span>
+        </div>
+        <button class="btn btn-secondary btn-mobile-logout" id="btnLogoutMobile" title="Cambiar de usuario">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </header>
+
+      <section id="driveView" class="view active">
+        <div class="admin-summary" id="adminSummary" style="display:none;">
+          <div class="summary-card"><span class="summary-num" id="sumClientes">0</span><span class="summary-label">Clientes</span></div>
+          <div class="summary-card"><span class="summary-num" id="sumArchivos">0</span><span class="summary-label">Archivos</span></div>
+          <div class="summary-card"><span class="summary-num" id="sumPendientes">0</span><span class="summary-label">Pendientes</span></div>
+          <div class="summary-card"><span class="summary-num" id="sumEnProceso">0</span><span class="summary-label">En proceso</span></div>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <div class="items-grid" id="itemsGrid"></div>
+          <div class="empty-state" id="emptyState" style="display:none;">
+            <i class="fas fa-folder-open"></i>
+            <p>Esta carpeta está vacía</p>
+            <p class="hint" id="emptyHint">Subí archivos o creá una carpeta para empezar</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="tasksView" class="view">
+        <div class="tasks-header">
+          <h2>Tareas de Impresión</h2>
+          <div class="filters" id="taskFilters">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="pendiente">Pendientes</button>
+            <button class="filter-btn" data-filter="en_proceso">En proceso</button>
+          </div>
+        </div>
+        <div class="tasks-list" id="tasksList"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Nueva carpeta -->
+  <div class="modal" id="modalNewFolder">
+    <div class="modal-content">
+      <h3>Nuevo cliente</h3>
+      <input type="text" id="folderNameInput" placeholder="Nombre del cliente" autofocus>
+      <p style="font-size:0.85rem;color:#64748b;margin:-8px 0 12px;">Ej: García, Cliente Futbol 1, etc.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close="modalNewFolder">Cancelar</button>
+        <button class="btn btn-primary" id="btnCreateFolder">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Renombrar -->
+  <div class="modal" id="modalRename">
+    <div class="modal-content">
+      <h3>Renombrar</h3>
+      <input type="text" id="renameInput" placeholder="Nuevo nombre">
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close="modalRename">Cancelar</button>
+        <button class="btn btn-primary" id="btnConfirmRename">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear tarea -->
+  <div class="modal" id="modalCreateTask">
+    <div class="modal-content">
+      <h3>Crear tarea de impresión</h3>
+      <div class="form-group">
+        <label>Nombre de la tarea</label>
+        <input type="text" id="taskNameInput" placeholder="Cliente - Nombre del pedido">
+      </div>
+      <div class="form-group">
+        <label>Fecha en la que debe estar listo</label>
+        <input type="date" id="taskDueDate">
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea id="taskNotes" rows="3" placeholder="Observaciones..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close="modalCreateTask">Cancelar</button>
+        <button class="btn btn-primary" id="btnConfirmCreateTask">Crear tarea</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Editor Overlay -->
+  <div class="editor-overlay" id="editorOverlay">
+    <div class="editor-header">
+      <div class="editor-title">
+        <i class="fas fa-crop-alt"></i>
+        <span id="editorFileName">Archivo</span>
+      </div>
+      <div class="editor-actions">
+        <button class="btn btn-secondary" id="btnCancelEdit">
+          <i class="fas fa-times"></i> Cerrar
+        </button>
+        <button class="btn btn-primary" id="btnExportSelection" disabled>
+          <i class="fas fa-download"></i> Exportar selección
+        </button>
+      </div>
+    </div>
+    <div class="editor-body">
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="mainCanvas"></canvas>
+        <div id="selectionBox" class="selection-box" style="display:none;"></div>
+      </div>
+      <aside class="editor-sidebar">
+        <div class="info-card">
+          <h4>Documento</h4>
+          <div class="info-row">
+            <span>Ancho total:</span>
+            <strong id="docWidth">—</strong>
+          </div>
+          <div class="info-row">
+            <span>Alto total:</span>
+            <strong id="docHeight">—</strong>
+          </div>
+        </div>
+        <div class="info-card">
+          <h4>Selección</h4>
+          <div class="info-row">
+            <span>Ancho:</span>
+            <strong id="selWidth">—</strong>
+          </div>
+          <div class="info-row">
+            <span>Alto:</span>
+            <strong id="selHeight">—</strong>
+          </div>
+          <p class="hint-small">Medidas aproximadas (96 DPI). Se ajustarán en la Etapa 2.</p>
+        </div>
+        <div class="info-card">
+          <h4>Instrucciones</h4>
+          <ol class="instructions">
+            <li>Hacé clic y arrastrá para seleccionar una zona</li>
+            <li>Ajustá los bordes si es necesario</li>
+            <li>Exportá la pieza seleccionada</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="contextMenu">
+    <button data-action="open"><i class="fas fa-folder-open"></i> Abrir</button>
+    <button data-action="create-task" class="admin-only"><i class="fas fa-tasks"></i> Crear tarea de impresión</button>
+    <button data-action="rename" class="admin-only"><i class="fas fa-pen"></i> Renombrar</button>
+    <button data-action="delete" class="danger admin-only"><i class="fas fa-trash"></i> Eliminar</button>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
